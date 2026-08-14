@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="km">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ប្រព័ន្ធកត់ត្រាវត្តមាន</title>
+  <style>
+    * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+    body { background: #f0f2f5; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; padding: 20px; }
+    .card { background: #fff; padding: 25px; border-radius: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); width: 100%; max-width: 400px; text-align: center; }
+    h2 { color: #1e3c72; margin-top: 0; }
+    input, select, button { width: 100%; padding: 12px; margin: 10px 0; border-radius: 8px; border: 1px solid #ccc; font-size: 16px; }
+    button { background: #2a5298; color: white; border: none; font-weight: bold; cursor: pointer; transition: 0.3s; }
+    button:hover { background: #1e3c72; }
+    .status { margin-top: 15px; font-size: 15px; font-weight: bold; }
+    .success { color: #28a745; }
+    .error { color: #dc3545; }
+    .loading { color: #ff9800; }
+  </style>
+</head>
+<body>
+
+<div class="card">
+  <h2>📍 កត់ត្រាវត្តមានការងារ</h2>
+  
+  <label style="float:left; font-size:14px;">ឈ្មោះបុគ្គលិក៖</label>
+  <input type="text" id="empName" placeholder="សូមបញ្ចូលឈ្មោះរបស់អ្នក..." required>
+
+  <label style="float:left; font-size:14px;">ប្រភេទវត្តមាន៖</label>
+  <select id="actionType">
+    <option value="🟢 ចូលធ្វើការ (Check-in)">🟢 ចូលធ្វើការ (Check-in)</option>
+    <option value="🔴 ចេញទៅផ្ទះ (Check-out)">🔴 ចេញទៅផ្ទះ (Check-out)</option>
+  </select>
+
+  <button id="btnSubmit" onclick="getLocationAndSend()">📍 បញ្ជាក់វត្តមាន</button>
+
+  <div id="statusMsg" class="status"></div>
+</div>
+
+<script>
+  const BOT_TOKEN = "8910936837:AAGDMi2K8UQ_ZaX3K6XogrLcZRvNOg2-8Ss";
+  const GROUP_CHAT_ID = "-1004358845143";
+  const TARGET_LAT = 13.66160;
+  const TARGET_LON = 102.56560;
+  const ALLOWED_RADIUS_METERS = 100.0;
+
+  function calculateDistance(lat1, lon1, lat2, lon2) {
+    const R = 6371000;
+    const rad = (x) => x * Math.PI / 180;
+    const dLat = rad(lat2 - lat1);
+    const dLon = rad(lon2 - lon1);
+    const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+              Math.cos(rad(lat1)) * Math.cos(rad(lat2)) *
+              Math.sin(dLon/2) * Math.sin(dLon/2);
+    const c = 2 * Math.atan2(math.sqrt(a), math.sqrt(1-a));
+    return R * c;
+  }
+
+  function getLocationAndSend() {
+    const name = document.getElementById("empName").value.trim();
+    const action = document.getElementById("actionType").value;
+    const statusDiv = document.getElementById("statusMsg");
+    const btn = document.getElementById("btnSubmit");
+
+    if (!name) {
+      statusDiv.className = "status error";
+      statusDiv.innerHTML = "⚠️ សូមបញ្ចូលឈ្មោះរបស់អ្នកជាមុនសិន!";
+      return;
+    }
+
+    if (!navigator.geolocation) {
+      statusDiv.className = "status error";
+      statusDiv.innerHTML = "⚠️ ទូរស័ព្ទរបស់អ្នកមិនគាំទ្រ GPS ទេ។";
+      return;
+    }
+
+    statusDiv.className = "status loading";
+    statusDiv.innerHTML = "⏳ កំពុងផ្ទៀងផ្ទាត់ទីតាំង GPS...";
+    btn.disabled = true;
+
+    navigator.geolocation.getCurrentPosition(async (position) => {
+      const userLat = position.coords.latitude;
+      const userLon = position.coords.longitude;
+      const distance = calculateDistance(userLat, userLon, TARGET_LAT, TARGET_LON);
+
+      if (distance <= ALLOWED_RADIUS_METERS) {
+        const now = new Date();
+        const dateStr = now.toLocaleDateString('en-GB');
+        const timeStr = now.toLocaleTimeString('en-US');
+        const mapLink = `https://maps.google.com/?q=${userLat},${userLon}`;
+
+        const textMessage = `🔔 <b>របាយការណ៍វត្តមាន: ${action}</b>\n` +
+                            `━━━━━━━━━━━━━━━━━━\n` +
+                            `👤 <b>បុគ្គលិក:</b> ${name}\n` +
+                            `📅 <b>កាលបរិច្ឆេទ:</b> ${dateStr}\n` +
+                            `⏰ <b>ម៉ោង:</b> ${timeStr}\n` +
+                            `📍 <b>ទីតាំង:</b> <a href="${mapLink}">ចុចមើលលើ Maps</a>\n` +
+                            `📏 <b>គម្លាត:</b> ${distance.toFixed(1)} ម៉ែត្រ\n` +
+                            `━━━━━━━━━━━━━━━━━━\n` +
+                            `✅ <b>ស្ថានភាព:</b> ត្រឹមត្រូវ`;
+
+        try {
+          const res = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              chat_id: GROUP_CHAT_ID,
+              text: textMessage,
+              parse_mode: 'HTML',
+              disable_web_page_preview: true
+            })
+          });
+
+          if (res.ok) {
+            statusDiv.className = "status success";
+            statusDiv.innerHTML = `✅ កត់ត្រាវត្តមានជោគជ័យ!<br>ចម្ងាយ: ${distance.toFixed(1)} ម៉ែត្រ`;
+            document.getElementById("empName").value = "";
+          } else {
+            statusDiv.className = "status error";
+            statusDiv.innerHTML = "❌ មិនអាចផ្ញើសារបានទេ សូមពិនិត្យ Telegram Bot!";
+          }
+        } catch (e) {
+          statusDiv.className = "status error";
+          statusDiv.innerHTML = "❌ បរាជ័យក្នុងការតភ្ជាប់ទៅកាន់ Telegram!";
+        }
+      } else {
+        statusDiv.className = "status error";
+        statusDiv.innerHTML = `❌ អ្នកមិនស្ថិតនៅក្នុងទីតាំងទេ!<br>ចម្ងាយរបស់អ្នក: ${distance.toFixed(1)} ម៉ែត្រ (អនុញ្ញាតត្រឹម ${ALLOWED_RADIUS_METERS}m)`;
+      }
+      btn.disabled = false;
+    }, (error) => {
+      btn.disabled = false;
+      statusDiv.className = "status error";
+      statusDiv.innerHTML = "⚠️ សូមបើក Location (GPS) លើទូរស័ព្ទរបស់អ្នក រួចសាកល្បងម្ដងទៀត!";
+    }, { enableHighAccuracy: true });
+  }
+</script>
+
+</body>
+</html>
