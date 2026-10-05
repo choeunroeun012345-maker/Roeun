@@ -1,170 +1,90 @@
-import csv
-import os
-import math
-import threading
-from http.server import HTTPServer, BaseHTTPRequestHandler
-from datetime import datetime
-import pytz
-from telegram import Update, KeyboardButton, ReplyKeyboardMarkup, ReplyKeyboardRemove
-from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, filters, ContextTypes
+import logging
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram.ext import (
+    ApplicationBuilder,
+    CommandHandler,
+    MessageHandler,
+    ContextTypes,
+    filters,
+)
 
-# ==================== កំណត់ព័ត៌មាន Bot, ទីតាំង & Group ====================
-BOT_TOKEN = "8910936837:AAGDMi2K8UQ_ZaX3K6XogrLcZRvNOg2-8Ss"
-CAMBODIA_TZ = pytz.timezone('Asia/Phnom_Penh')
-CSV_FILE = "attendance.csv"
+BOT_TOKEN = "8928485887:AAFVf0z4IwvH-LkWGg4P6x58LuIF8L_pxG8"
+ADMIN_CHAT_ID = 944048718
 
-# 🎯 ទីតាំងនៅប៉ោយប៉ែត (MH68+J6X, Krong Poi Pet)
-TARGET_LAT = 13.66160
-TARGET_LON = 102.56560
-ALLOWED_RADIUS_METERS = 100.0  # ចម្ងាយអនុញ្ញាត ១០០ ម៉ែត្រ
+VIDEO_DATABASE = {
+    "v1": {
+        "title": "វីដេអូភាគពិសេស ទី ១",
+        "link": "https://drive.google.com/file/d/1tn7W9nxL7vFTPrcRzk5fuYldwqSUIO1p/view?usp=drivesdk"
+    }
+}
 
-# 👥 Group Chat ID របស់គ្រុប "Roeun and Y"
-GROUP_CHAT_ID = -1004358845143
+logging.basicConfig(
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO
+)
 
-# រូបមន្តគណនាចម្ងាយ GPS (Haversine Formula)
-def calculate_distance(lat1, lon1, lat2, lon2):
-    R = 6371000  # ម៉ែត្រ
-    phi1 = math.radians(lat1)
-    phi2 = math.radians(lat2)
-    delta_phi = math.radians(lat2 - lat1)
-    delta_lambda = math.radians(lon2 - lon1)
-
-    a = math.sin(delta_phi / 2.0) ** 2 + \
-        math.cos(phi1) * math.cos(phi2) * \
-        math.sin(delta_lambda / 2.0) ** 2
-    c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
-    return R * c
-
-# បង្កើត CSV Header
-if not os.path.exists(CSV_FILE):
-    with open(CSV_FILE, mode='w', newline='', encoding='utf-8-sig') as file:
-        writer = csv.writer(file)
-        writer.writerow(["Telegram ID", "ឈ្មោះពេញ", "Username", "ប្រភេទ", "កាលបរិច្ឆេទ", "ម៉ោង", "Latitude", "Longitude", "ចម្ងាយ(m)", "ស្ថានភាព"])
-
-# ដំណើរការពេលស្កេន QR Code ឬវាយ /start
-async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_name = update.effective_user.first_name
-    action_type = "attendance"
-    
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if context.args:
-        if context.args[0] == "checkin":
-            action_type = "checkin"
-        elif context.args[0] == "checkout":
-            action_type = "checkout"
+        video_id = context.args[0]
+        if video_id in VIDEO_DATABASE:
+            context.user_data["selected_video"] = video_id
+            video_info = VIDEO_DATABASE[video_id]
 
-    context.user_data['action_type'] = action_type
+            await update.message.reply_text(
+                f"🎬 អ្នកបានជ្រើសរើស៖ **{video_info['title']}**\n\n"
+                f"📌 សូមស្កេន KHQR ដើម្បីទូទាត់ប្រាក់ (៤,០០០៛ ឬ $1)។\n"
+                f"📷 បន្ទាប់ពីផ្ទេរប្រាក់រួច សូមផ្ញើរូបភាពវិក្កយបត្រ (Payment Slip) ចូលមកទីនេះ។\n\n"
+                f"⚡ ប្រព័ន្ធនឹងផ្ញើតំណភ្ជាប់ Google Drive នៃវីដេអូនេះជូនភ្លាមៗ!",
+                parse_mode="Markdown"
+            )
+            return
 
-    if action_type == "checkin":
-        btn_text = "🟢 ចុចទីនេះដើម្បីបញ្ជាក់វត្តមាន «ចូលធ្វើការ»"
-        welcome_text = f"👋 សួស្តី {user_name}!\n\nសូមចុចប៊ូតុងខាងក្រោម ដើម្បីកត់ត្រាវត្តមាន <b>«ចូលធ្វើការ»</b>៖"
-    elif action_type == "checkout":
-        btn_text = "🔴 ចុចទីនេះដើម្បីបញ្ជាក់វត្តមាន «ចេញទៅផ្ទះ»"
-        welcome_text = f"👋 សួស្តី {user_name}!\n\nសូមចុចប៊ូតុងខាងក្រោម ដើម្បីកត់ត្រាវត្តមាន <b>«ចេញទៅផ្ទះ»</b>៖"
-    else:
-        btn_text = "📍 ចុចទីនេះដើម្បីបញ្ជាក់វត្តមាន & ទីតាំង"
-        welcome_text = f"👋 សួស្តី {user_name}!\n\nសូមចុចប៊ូតុងខាងក្រោម ដើម្បីកត់ត្រាវត្តមាន៖"
+    await update.message.reply_text(
+        "👋 សួស្តី! សូមចូលទៅកាន់ Channel ហើយចុចលើ Link វីដេអូដែលអ្នកចង់ទស្សនាជាមុនសិន។"
+    )
 
-    location_button = KeyboardButton(text=btn_text, request_location=True)
-    reply_markup = ReplyKeyboardMarkup([[location_button]], one_time_keyboard=True, resize_keyboard=True)
-    await update.message.reply_text(welcome_text, parse_mode="HTML", reply_markup=reply_markup)
+async def handle_slip(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user = update.effective_user
+    photo_file_id = update.message.photo[-1].file_id
 
-# ដំណើរការពេលទទួលបាន Location
-async def handle_location(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    selected_video_id = context.user_data.get("selected_video", "v1")
+    video_info = VIDEO_DATABASE.get(selected_video_id, VIDEO_DATABASE["v1"])
+
+    keyboard = [
+        [InlineKeyboardButton(f"🎬 ចុចទីនេះដើម្បីទស្សនា {video_info['title']}", url=video_info["link"])]
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+
+    await update.message.reply_text(
+        text=(
+            f"🎉 **ការទូទាត់ទទួលបានជោគជ័យ!**\n\n"
+            f"នេះជាតំណភ្ជាប់ទស្សនា៖ **{video_info['title']}**\n"
+            f"សូមចុចប៊ូតុងខាងក្រោមដើម្បីទស្សនាលើ Google Drive："
+        ),
+        reply_markup=reply_markup,
+        parse_mode="Markdown",
+    )
+
+    admin_caption = (
+        f"🔔 **មានការបញ្ជាទិញវីដេអូថ្មី!**\n"
+        f"🎬 វីដេអូ៖ {video_info['title']}\n"
+        f"👤 ភ្ញៀវ៖ {user.full_name}\n"
+        f"🆔 ID: `{user.id}`"
+    )
     try:
-        user = update.effective_user
-        location = update.message.location
-        action_type = context.user_data.get('action_type', 'checkin')
-        
-        if action_type == "checkin":
-            action_title = "ចូលធ្វើការ (Check-in)"
-            icon = "🟢"
-        elif action_type == "checkout":
-            action_title = "ចេញទៅផ្ទះ (Check-out)"
-            icon = "🔴"
-        else:
-            action_title = "វត្តមានទូទៅ"
-            icon = "📍"
-
-        user_lat = location.latitude
-        user_lon = location.longitude
-        
-        # គណនាចម្ងាយពីអ្នកស្កេន ទៅកាន់ទីតាំង
-        distance = calculate_distance(user_lat, user_lon, TARGET_LAT, TARGET_LON)
-        now = datetime.now(CAMBODIA_TZ)
-        date_str = now.strftime("%d/%m/%Y")
-        time_str = now.strftime("%I:%M:%S %p")
-        maps_link = f"https://maps.google.com/?q={user_lat},{user_lon}"
-        
-        # ពិនិត្យមើលចម្ងាយ (រង្វង់ ១០០ ម៉ែត្រ)
-        if distance <= ALLOWED_RADIUS_METERS:
-            status = "ត្រឹមត្រូវ"
-            with open(CSV_FILE, mode='a', newline='', encoding='utf-8-sig') as file:
-                writer = csv.writer(file)
-                writer.writerow([user.id, user.full_name, f"@{user.username}" if user.username else "N/A", action_title, date_str, time_str, user_lat, user_lon, f"{distance:.1f}m", status])
-            
-            # សារផ្ញើទៅកាន់បុគ្គលិកផ្ទាល់
-            user_msg = (
-                f"✅ <b>កត់ត្រា {action_title} ជោគជ័យ!</b>\n"
-                f"━━━━━━━━━━━━━━━━━━\n"
-                f"👤 <b>ឈ្មោះ:</b> {user.full_name}\n"
-                f"📅 <b>កាលបរិច្ឆេទ:</b> {date_str}\n"
-                f"⏰ <b>ម៉ោង:</b> {time_str}\n"
-                f"📍 <b>ចម្ងាយ:</b> {distance:.1f} ម៉ែត្រ (ត្រឹមត្រូវ)\n"
-                f"━━━━━━━━━━━━━━━━━━\n"
-                f"✨ សូមអរគុណ!"
-            )
-            await update.message.reply_text(user_msg, parse_mode="HTML", disable_web_page_preview=True, reply_markup=ReplyKeyboardRemove())
-
-            # សារផ្ញើជូនដំណឹងស្វ័យប្រវត្តិទៅក្នុង Telegram Group
-            if GROUP_CHAT_ID:
-                group_msg = (
-                    f"🔔 <b>របាយការណ៍វត្តមាន: {icon} {action_title}</b>\n"
-                    f"━━━━━━━━━━━━━━━━━━\n"
-                    f"👤 <b>បុគ្គលិក:</b> {user.full_name} ({f'@{user.username}' if user.username else 'គ្មាន Username'})\n"
-                    f"📅 <b>កាលបរិច្ឆេទ:</b> {date_str}\n"
-                    f"⏰ <b>ម៉ោង:</b> {time_str}\n"
-                    f"📍 <b>ទីតាំង:</b> <a href='{maps_link}'>ចុចមើលលើ Maps</a>\n"
-                    f"📏 <b>គម្លាត:</b> {distance:.1f} ម៉ែត្រ\n"
-                    f"━━━━━━━━━━━━━━━━━━\n"
-                    f"✅ <b>ស្ថានភាព:</b> ត្រឹមត្រូវ"
-                )
-                await context.bot.send_message(chat_id=GROUP_CHAT_ID, text=group_msg, parse_mode="HTML", disable_web_page_preview=True)
-
-        else:
-            # ករណីស្កេនខុសទីតាំង
-            reject_msg = (
-                f"❌ <b>មិនអាចកត់ត្រាបានទេ!</b>\n"
-                f"━━━━━━━━━━━━━━━━━━\n"
-                f"⚠️ អ្នកមិនស្ថិតនៅក្នុងទីតាំងដែលបានកំណត់ទេ!\n"
-                f"📍 <b>ចម្ងាយរបស់អ្នក:</b> {distance:.1f} ម៉ែត្រពីទីតាំង\n"
-                f"📏 <b>ចម្ងាយអនុញ្ញាត:</b> ត្រឹម {ALLOWED_RADIUS_METERS:.0f} ម៉ែត្រប៉ុណ្ណោះ។\n"
-                f"━━━━━━━━━━━━━━━━━━\n"
-                f"សូមអញ្ជើញមកដល់កន្លែងធ្វើការផ្ទាល់រួចស្កេនម្តងទៀត!"
-            )
-            await update.message.reply_text(reject_msg, parse_mode="HTML", disable_web_page_preview=True, reply_markup=ReplyKeyboardRemove())
-
-    except Exception as e:
-        print(f"Error: {e}")
-
-# Web Server ជំនួយសម្រាប់ Render
-class SimpleHandler(BaseHTTPRequestHandler):
-    def do_GET(self):
-        self.send_response(200)
-        self.end_headers()
-        self.wfile.write(b"Bot is running 24/7!")
-
-def run_web_server():
-    port = int(os.environ.get("PORT", 8080))
-    server = HTTPServer(("0.0.0.0", port), SimpleHandler)
-    server.serve_forever()
+        await context.bot.send_photo(
+            chat_id=ADMIN_CHAT_ID,
+            photo=photo_file_id,
+            caption=admin_caption,
+            parse_mode="Markdown",
+        )
+    except Exception:
+        pass
 
 def main():
-    print("🤖 Bot កំពុងដំណើរការ...")
-    threading.Thread(target=run_web_server, daemon=True).start()
     app = ApplicationBuilder().token(BOT_TOKEN).build()
-    app.add_handler(CommandHandler("start", start_command))
-    app.add_handler(MessageHandler(filters.LOCATION, handle_location))
+    app.add_handler(CommandHandler("start", start))
+    app.add_handler(MessageHandler(filters.PHOTO, handle_slip))
     app.run_polling()
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
