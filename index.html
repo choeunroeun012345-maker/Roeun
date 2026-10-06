@@ -11,45 +11,46 @@
       padding: 0;
     }
     body {
-      background-color: #0f172a;
+      background-color: #0b0f19;
       color: #ffffff;
       font-family: Arial, sans-serif;
-      padding-bottom: 40px;
+      padding-bottom: 50px;
     }
     header {
-      background-color: #1e293b;
-      padding: 16px;
+      background-color: #111827;
+      padding: 14px;
       text-align: center;
-      font-size: 20px;
+      font-size: 18px;
       font-weight: bold;
-      border-bottom: 2px solid #334155;
+      border-bottom: 1px solid #1f2937;
       position: sticky;
       top: 0;
-      z-index: 20;
+      z-index: 30;
     }
     .container {
-      width: 92%;
-      max-width: 900px;
-      margin: 20px auto;
+      width: 95%;
+      max-width: 800px;
+      margin: 15px auto;
     }
 
-    /* ផ្ទាំងចាក់វីដេអូធំ */
+    /* ផ្ទាំងចាក់វីដេអូ */
     .player-section {
       display: none;
-      background-color: #1e293b;
+      background-color: #111827;
       border-radius: 12px;
-      padding: 16px;
-      box-shadow: 0 4px 16px rgba(0,0,0,0.6);
-      margin-bottom: 30px;
+      padding: 12px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.7);
+      margin-bottom: 25px;
+      border: 1px solid #1f2937;
     }
     .player-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 12px;
+      margin-bottom: 10px;
     }
     .player-title {
-      font-size: 18px;
+      font-size: 16px;
       color: #38bdf8;
       font-weight: bold;
     }
@@ -65,7 +66,7 @@
     .video-wrapper {
       position: relative;
       width: 100%;
-      padding-top: 56.25%; /* 16:9 */
+      padding-top: 56.25%; /* 16:9 widescreen */
       background-color: #000;
       border-radius: 8px;
       overflow: hidden;
@@ -86,32 +87,32 @@
       left: 0;
       width: 100%;
       height: 100%;
-      background-color: #020617;
+      background-color: #030712;
       display: flex;
       flex-direction: column;
       justify-content: center;
       align-items: center;
-      z-index: 10;
+      z-index: 20;
       text-align: center;
-      padding: 15px;
+      padding: 10px;
     }
     .ad-banner-box {
-      width: 100%;
+      width: 90%;
       max-width: 320px;
-      height: 140px;
-      background-color: #334155;
+      min-height: 120px;
+      background-color: #1f2937;
       display: flex;
       align-items: center;
       justify-content: center;
-      border: 1px dashed #64748b;
-      margin-bottom: 14px;
+      border: 1px dashed #4b5563;
+      margin-bottom: 12px;
       border-radius: 6px;
     }
     .skip-btn {
       background-color: #2563eb;
       color: #ffffff;
       border: none;
-      padding: 10px 20px;
+      padding: 10px 22px;
       border-radius: 6px;
       font-size: 15px;
       cursor: pointer;
@@ -123,53 +124,47 @@
     }
     .timer-text {
       font-size: 14px;
-      color: #94a3b8;
+      color: #9ca3af;
     }
 
-    /* បញ្ជីរាយកាតវីដេអូ (Video Grid) */
+    /* បញ្ជីកាតវីដេអូ */
     .catalog-title {
-      font-size: 18px;
-      margin-bottom: 16px;
-      color: #f8fafc;
+      font-size: 17px;
+      margin-bottom: 14px;
+      color: #f3f4f6;
       font-weight: bold;
     }
     .video-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-      gap: 16px;
+      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+      gap: 12px;
     }
     .video-card {
-      background-color: #1e293b;
-      border-radius: 10px;
+      background-color: #111827;
+      border-radius: 8px;
       overflow: hidden;
       cursor: pointer;
-      transition: transform 0.2s, box-shadow 0.2s;
-      border: 1px solid #334155;
-    }
-    .video-card:hover {
-      transform: translateY(-4px);
-      box-shadow: 0 6px 14px rgba(0,0,0,0.4);
-      border-color: #38bdf8;
+      border: 1px solid #1f2937;
     }
     .card-thumb {
       width: 100%;
-      height: 120px;
-      background-color: #334155;
+      height: 100px;
+      background-color: #374151;
       object-fit: cover;
       display: block;
     }
     .card-info {
-      padding: 12px;
+      padding: 10px;
     }
     .card-title {
-      font-size: 15px;
+      font-size: 14px;
       font-weight: bold;
       color: #ffffff;
-      margin-bottom: 6px;
+      margin-bottom: 4px;
     }
     .card-desc {
-      font-size: 12px;
-      color: #94a3b8;
+      font-size: 11px;
+      color: #9ca3af;
     }
   </style>
 </head>
@@ -179,7 +174,7 @@
 
   <div class="container">
 
-    <!-- ផ្នែកចាក់វីដេអូ (នឹងបង្ហាញឡើងពេលចុចលើវីដេអូណាមួយ) -->
+    <!-- ផ្ទាំងចាក់វីដេអូ -->
     <div class="player-section" id="playerSection">
       <div class="player-header">
         <div class="player-title" id="activeVideoTitle">កំពុងចាក់...</div>
@@ -187,60 +182,32 @@
       </div>
 
       <div class="video-wrapper">
-        <!-- ផ្ទាំងពាណិជ្ជកម្ម -->
         <div id="adOverlay">
-          <div class="ad-banner-box">
-            <p style="color: #cbd5e1; font-size: 13px;">[ ផ្ទាំងពាណិជ្ជកម្មបង្ហាញទីនេះ ]</p>
+          <div class="ad-banner-box" id="adContainer">
+            <!-- ត្រង់នេះជាកន្លែងដាក់កូដពាណិជ្ជកម្មពិត -->
+            <p style="color: #9ca3af; font-size: 13px;">[ ផ្ទាំងពាណិជ្ជកម្ម ]</p>
           </div>
           <div class="timer-text" id="timerNotice">ពាណិជ្ជកម្មនឹងចប់ក្នុងរយៈពេល <span id="countdown">5</span> វិនាទី...</div>
           <button class="skip-btn" id="skipButton" onclick="skipAd()">ចូលទស្សនាវីដេអូ ⏩</button>
         </div>
 
-        <iframe id="mainPlayer" src="" allow="autoplay"></iframe>
+        <!-- បន្ថែម allowfullscreen ពេញលេញ -->
+        <iframe id="mainPlayer" src="" allow="autoplay; fullscreen" allowfullscreen="true" webkitallowfullscreen="true" mozallowfullscreen="true"></iframe>
       </div>
     </div>
 
-    <!-- បញ្ជីវីដេអូសម្រាប់ជ្រើសរើស (Catalog) -->
+    <!-- បញ្ជីវីដេអូ -->
     <div class="catalog-title">📺 ជ្រើសរើសវីដេអូដែលអ្នកចង់ទស្សនា៖</div>
     
     <div class="video-grid">
-
       <!-- វីដេអូ ទី ១ -->
       <div class="video-card" onclick="playSelectedVideo('វីដេអូភាគពិសេស ទី ១', 'https://drive.google.com/file/d/1tn7W9nxL7vFTPrcRzk5fuYldwqSUIO1p/preview')">
         <img class="card-thumb" src="https://images.unsplash.com/photo-1536440136628-849c177e76a1?w=400&q=80" alt="Thumb">
         <div class="card-info">
           <div class="card-title">វីដេអូភាគពិសេស ទី ១</div>
-          <div class="card-desc">ចុចដើម្បីទស្សនាវីដេអូភាគពេញ</div>
+          <div class="card-desc">ចុចដើម្បីទស្សនាវីដេអូពេញ</div>
         </div>
       </div>
-
-      <!-- វីដេអូ ទី ២ -->
-      <div class="video-card" onclick="playSelectedVideo('វីដេអូភាគពិសេស ទី ២', 'https://drive.google.com/file/d/1tn7W9nxL7vFTPrcRzk5fuYldwqSUIO1p/preview')">
-        <img class="card-thumb" src="https://images.unsplash.com/photo-1574375927938-d5a98e8ffe85?w=400&q=80" alt="Thumb">
-        <div class="card-info">
-          <div class="card-title">វីដេអូភាគពិសេស ទី ២</div>
-          <div class="card-desc">ចុចដើម្បីទស្សនាវីដេអូភាគពេញ</div>
-        </div>
-      </div>
-
-      <!-- វីដេអូ ទី ៣ -->
-      <div class="video-card" onclick="playSelectedVideo('វីដេអូភាគពិសេស ទី ៣', 'https://drive.google.com/file/d/1tn7W9nxL7vFTPrcRzk5fuYldwqSUIO1p/preview')">
-        <img class="card-thumb" src="https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=400&q=80" alt="Thumb">
-        <div class="card-info">
-          <div class="card-title">វីដេអូភាគពិសេស ទី ៣</div>
-          <div class="card-desc">ចុចដើម្បីទស្សនាវីដេអូភាគពេញ</div>
-        </div>
-      </div>
-
-      <!-- វីដេអូ ទី ៤ -->
-      <div class="video-card" onclick="playSelectedVideo('វីដេអូភាគពិសេស ទី ៤', 'https://drive.google.com/file/d/1tn7W9nxL7vFTPrcRzk5fuYldwqSUIO1p/preview')">
-        <img class="card-thumb" src="https://images.unsplash.com/photo-1518173946687-a4c8a383392e?w=400&q=80" alt="Thumb">
-        <div class="card-info">
-          <div class="card-title">វីដេអូភាគពិសេស ទី ៤</div>
-          <div class="card-desc">ចុចដើម្បីទស្សនាវីដេអូភាគពេញ</div>
-        </div>
-      </div>
-
     </div>
 
   </div>
@@ -261,10 +228,8 @@
       mainPlayer.src = url;
       playerSection.style.display = "block";
       
-      // រំកិលអេក្រង់ឡើងទៅមើលវីដេអូ
       window.scrollTo({ top: 0, behavior: 'smooth' });
 
-      // ចាប់ផ្តើមរាប់ពាណិជ្ជកម្ម ៥ វិនាទី
       clearInterval(timer);
       secondsLeft = 5;
       countdownEl.innerText = secondsLeft;
